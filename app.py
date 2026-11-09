@@ -95,11 +95,34 @@ def train_and_evaluate(data_id_string, train_features, train_labels):
     return ml_pipelines
 
 
+def validate_dataset(data_frame):
+    """Validate the raw dataset before preprocessing."""
+    required_cols = [time_col, predict_target] + weather_cols
+
+    if data_frame.empty:
+        raise ValueError("The dataset is empty.")
+
+    missing_cols = [col for col in required_cols if col not in data_frame.columns]
+    if missing_cols:
+        raise ValueError(f"Missing required columns: {missing_cols}")
+
+    invalid_targets = int(
+        (~data_frame[predict_target].isin(["Yes", "No"])).sum()
+    )
+    missing_dates = int(data_frame[time_col].isna().sum())
+
+    return {
+        "invalid_targets": invalid_targets,
+        "missing_dates": missing_dates,
+    }
+
+
 @st.cache_data
 def prep_dataset(file_location, modified_time):
     """Reads the CSV file, removes duplicates, and drops bad rows."""
     
     data_frame = pd.read_csv(file_location)
+    validation_report = validate_dataset(data_frame)
     
     needed_cols = [time_col, predict_target] + weather_cols
     missing_cols = [c for c in needed_cols if c not in data_frame.columns]
@@ -124,7 +147,10 @@ def prep_dataset(file_location, modified_time):
         "start_len": start_len,
         "dupe_count": dupe_count,
         "final_len": len(data_frame),
-        "total_dropped": start_len - len(data_frame)
+        "total_dropped": start_len - len(data_frame),
+        "invalid_targets": validation_report["invalid_targets"],
+        "missing_dates": validation_report["missing_dates"],
+        "validation_status": "Passed"
     }
     
     return data_frame, stats
@@ -175,6 +201,14 @@ with info_tab:
     col2.metric("Predictors", len(weather_cols))
     col3.metric("Dupes Dropped", f"{clean_stats['dupe_count']:,}")
     col4.metric("Blank Cells", f"{int(weather_data[weather_cols].isna().sum().sum()):,}")
+
+    st.subheader("Dataset Validation Report")
+    st.success("Dataset validation completed successfully.")
+
+    val_col1, val_col2, val_col3 = st.columns(3)
+    val_col1.metric("Invalid Target Records", f"{clean_stats['invalid_targets']:,}")
+    val_col2.metric("Missing Date Records", f"{clean_stats['missing_dates']:,}")
+    val_col3.metric("Validation Status", clean_stats["validation_status"])
 
     st.subheader("Data Cleaning Stats")
     st.dataframe(pd.DataFrame({

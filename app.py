@@ -13,7 +13,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
+    accuracy_score, balanced_accuracy_score, precision_score, recall_score, f1_score,
     roc_auc_score, confusion_matrix, classification_report,
     RocCurveDisplay
 )
@@ -143,12 +143,11 @@ if len(df) < 50:
     st.stop()
 
 df["RainTomorrowBinary"] = df[TARGET].map({"No": 0, "Yes": 1})
-tab_overview, tab_eda, tab_models, tab_predict, tab_report = st.tabs([
+tab_overview, tab_eda, tab_models, tab_predict = st.tabs([
     "📌 Overview & Data Cleaning",
     "📊 EDA & Statistical Analysis",
     "🤖 Model Comparison",
-    "🌦️ Predict Rainfall",
-    "📝 Assignment Report Guide"
+    "🌦️ Predict Rainfall"
 ])
 
 # -------------------- OVERVIEW --------------------
@@ -392,9 +391,17 @@ with tab_models:
             row = {
                 "Model": name,
                 "Accuracy": accuracy_score(y_test, pred),
+                "Balanced Accuracy": balanced_accuracy_score(y_test, pred),
                 "Precision (Rain)": precision_score(y_test, pred, zero_division=0),
                 "Recall (Rain)": recall_score(y_test, pred, zero_division=0),
-                "F1-score (Rain)": f1_score(y_test, pred, zero_division=0)
+                "F1-score (Rain)": f1_score(y_test, pred, zero_division=0),
+                "Specificity (No Rain)": (
+                    confusion_matrix(y_test, pred, labels=[0, 1])[0, 0]
+                    / max(
+                        confusion_matrix(y_test, pred, labels=[0, 1])[0, :].sum(),
+                        1
+                    )
+                )
             }
             try:
                 proba = fitted_model.predict_proba(X_test)[:, list(fitted_model.named_steps["classifier"].classes_).index(1)]
@@ -409,7 +416,11 @@ with tab_models:
 
         metric = st.selectbox(
             "Choose metric to visualize",
-            ["Accuracy", "Precision (Rain)", "Recall (Rain)", "F1-score (Rain)", "ROC-AUC"]
+            [
+                "Accuracy", "Balanced Accuracy", "Precision (Rain)",
+                "Recall (Rain)", "F1-score (Rain)",
+                "Specificity (No Rain)", "ROC-AUC"
+            ]
         )
         fig, ax = plt.subplots()
         ax.bar(results_df.index, results_df[metric])
@@ -422,12 +433,36 @@ with tab_models:
         plt.close(fig)
 
         best_name = results_df["F1-score (Rain)"].idxmax()
+        best_row = results_df.loc[best_name]
+
+        st.subheader("Evaluation Summary")
+        summary_col1, summary_col2, summary_col3 = st.columns(3)
+        summary_col1.metric("Top Model (Rain F1)", best_name)
+        summary_col2.metric("Best Rain F1-score", f"{best_row['F1-score (Rain)']:.3f}")
+        summary_col3.metric("Best Rain Recall", f"{results_df['Recall (Rain)'].max():.3f}")
+
+        ranked_results = (
+            results_df.sort_values("F1-score (Rain)", ascending=False)
+            .reset_index()
+        )
+        ranked_results.insert(0, "Rank", range(1, len(ranked_results) + 1))
+        st.subheader("Models Ranked by Rain-class F1-score")
+        st.dataframe(
+            ranked_results.style.format({
+                col: "{:.3f}" for col in ranked_results.select_dtypes(include="number").columns
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
+
         st.success(
             f"Best model by Rain-class F1-score on the held-out test set: {best_name}"
         )
         st.caption(
-            "Choose a final model based on the task's priorities, not accuracy alone. "
-            "If missing rain is costly, pay special attention to Rain recall."
+            "Balanced accuracy gives equal weight to both classes. Specificity measures "
+            "how well the model identifies no-rain days. Choose a final model based on "
+            "the task's priorities, not accuracy alone. If missing rain is costly, "
+            "pay special attention to Rain recall."
         )
 
         selected_model_name = st.selectbox(
@@ -594,60 +629,3 @@ with tab_predict:
             )
         except Exception as exc:
             st.error(f"Prediction failed: {exc}")
-
-# -------------------- REPORT GUIDE --------------------
-with tab_report:
-    st.header("5. Assignment Report Guide")
-    st.write(
-        "Use this structure for the written report required by the assignment. "
-        "Insert actual figures and measured results from the tabs above; do not "
-        "invent accuracy values or findings."
-    )
-    st.markdown("""
-### Suggested report structure
-
-1. **Title page**
-   - Rainfall Prediction Using Machine Learning
-   - Course: CSE570 — Machine Learning with Python
-   - Student name, registration number, programme, faculty, submission date
-
-2. **Problem statement and objectives**
-   - Define the binary classification problem and `RainTomorrow` target.
-   - Explain intended users, measurable objectives, assumptions, and limitations.
-
-3. **Dataset description**
-   - Source: Rain in Australia dataset (Kaggle link shown in the Overview tab).
-   - Report the exact row/feature counts calculated from your downloaded CSV.
-   - Include target distribution, data dictionary, and missing-value summary.
-
-4. **Methodology / workflow**
-   - Load data → remove duplicates → correct data types → chronological split
-     → imputation/scaling inside pipelines → train models → evaluate → predict.
-   - Explain why time ordering is used for the train/test split.
-
-5. **Data cleaning and EDA**
-   - Include target distribution, missing-value chart, feature histogram,
-     rain/no-rain boxplot, correlation matrix, group-wise summary, and
-     Mann–Whitney U test.
-   - Interpret each figure in words, not only paste the chart.
-
-6. **Model development and evaluation**
-   - Baseline, Logistic Regression, Decision Tree, Random Forest.
-   - Compare accuracy, Rain precision, Rain recall, Rain F1-score, ROC-AUC,
-     confusion matrix, and ROC curves.
-   - Explain the selected model and feature importance/coefficients.
-   - Record real metrics generated by your run.
-
-7. **Results and discussion**
-   - State the strongest model for your chosen metric.
-   - Discuss class imbalance, false negatives, false positives, and generalization.
-
-8. **Conclusion, limitations, and future work**
-   - Australian data may not generalize to Indian weather.
-   - Manual input values and the model's estimated probability are not official forecasts.
-   - Future work: validate with suitable Indian weather data and add reliable forecast data.
-
-9. **References and evidence**
-   - Dataset link, Python, Pandas, Scikit-learn, Streamlit documentation.
-   - GitHub repository URL and LinkedIn post URL/screenshot after you create them.
-""")

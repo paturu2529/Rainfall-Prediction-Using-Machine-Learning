@@ -28,13 +28,13 @@ https://www.kaggle.com/datasets/jsphyg/weather-dataset-rattle-package
 
 ## Technologies Used
 
-- Python
-- Pandas
-- NumPy
-- Matplotlib
-- SciPy
-- Scikit-learn
-- Streamlit
+pandas==2.2.3
+numpy==2.1.3
+matplotlib==3.9.2
+seaborn==0.13.2
+scikit-learn==1.5.2
+scipy==1.14.1
+joblib==1.4.2
 
 ## Machine Learning Models
 

@@ -89,6 +89,22 @@ Run the Streamlit application:
 streamlit run app.py
 ```
 
+
+## Exploratory Data Analysis (EDA)
+
+The project performs Exploratory Data Analysis to understand historical weather patterns and identify relationships between weather conditions and rainfall.
+
+The EDA module includes:
+
+- **Feature Distribution Analysis:** Interactive histograms to understand the distribution of weather variables such as temperature, humidity, rainfall, and wind speed.
+- **Rain vs No-Rain Comparison:** Box plots to compare weather conditions on rainy and non-rainy days.
+- **Correlation Analysis:** A correlation matrix to identify relationships between different weather features.
+- **Statistical Analysis:** Mann-Whitney U test to examine differences in afternoon humidity between rainy and non-rainy days.
+- **Descriptive Statistics:** Summary statistics such as mean, median, standard deviation, minimum, and maximum values.
+
+These analyses help identify important weather patterns and understand the factors associated with next-day rainfall.
+
+
 ## Limitations
 
 - The model uses historical Australian weather data.

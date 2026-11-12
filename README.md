@@ -63,6 +63,20 @@ Rainfall-Prediction-Using-Machine-Learning/
 └── .gitignore
 ```
 
+
+## Model Evaluation Metrics
+
+The rainfall prediction model is evaluated using the following metrics:
+
+- **Accuracy:** Measures the overall percentage of correct predictions.
+- **Precision:** Measures how many predicted rainfall cases were actually rainfall cases.
+- **Recall:** Measures how many actual rainfall cases were correctly identified.
+- **F1-Score:** Balances precision and recall.
+- **Confusion Matrix:** Shows correct and incorrect predictions for rainfall and no-rainfall classes.
+
+These metrics help evaluate the model's performance and reliability.
+
+
 ## How to Run the Project
 
 Clone the repository:
